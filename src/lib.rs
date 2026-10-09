@@ -293,7 +293,6 @@ impl Runner {
                 .restart(child, Restart::Syscall)
                 .map_err(RunError::Restart)?;
         }
-        eprintln!("Command finished");
         if let Ok(status) = NonZeroI32::try_from(exit_status) {
             return Err(RunError::Exit(status));
         }
