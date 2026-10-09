@@ -287,7 +287,7 @@ impl Runner {
                 }
                 Ok(Some(SetExitStatus(status))) => exit_status = status,
                 Ok(None) => {}
-                Err(e) => warn!("{:#?}", anyhow::anyhow!("{e}")),
+                Err(e) => warn!("{:?}", anyhow::anyhow!(e)),
             }
             tracer
                 .restart(child, Restart::Syscall)
