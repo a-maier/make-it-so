@@ -110,6 +110,7 @@ use pete::{Ptracer, Restart};
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use syscalls::SyscallAction::*;
+use tempfile::NamedTempFile;
 use thiserror::Error;
 
 /// The task runner
@@ -146,7 +147,13 @@ impl Runner {
 
     /// Save the dependencies to the associated YAML cache file
     pub fn save(&self) -> Result<(), IOError> {
-        self.write_dependencies(File::create(&self.cache_path)?)
+        let target_dir = self.cache_path
+            .parent()
+            .expect("Cache path has no parent");
+        let mut outfile = NamedTempFile::new_in(target_dir)?;
+        self.write_dependencies(&mut outfile)?;
+        outfile.persist(&self.cache_path)?;
+        Ok(())
     }
 
     /// Write out the dependencies in YAML format
@@ -280,7 +287,7 @@ impl Runner {
                 }
                 Ok(Some(SetExitStatus(status))) => exit_status = status,
                 Ok(None) => {}
-                Err(e) => warn!("{}", anyhow::anyhow!("{e}")),
+                Err(e) => warn!("{:#?}", anyhow::anyhow!("{e}")),
             }
             tracer
                 .restart(child, Restart::Syscall)
@@ -319,6 +326,8 @@ impl Runner {
 pub enum IOError {
     #[error("I/O error")]
     File(#[from] std::io::Error),
+    #[error("Failed to persist temporary file")]
+    Persist(#[from] tempfile::PersistError),
     #[error("Failed to (de)serialize runner")]
     Parse(#[from] yaml_serde::Error),
 }
