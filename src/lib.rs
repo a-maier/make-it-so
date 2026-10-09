@@ -347,8 +347,6 @@ pub enum RunError {
         syscall: String,
         source: SyscallHandleError,
     },
-    #[error("Failed to run command")]
-    Run(#[from] pete::Error),
     #[error("Command quit with non-zero status {0}")]
     Exit(NonZeroI32),
     #[error("Failed to export cache")]
