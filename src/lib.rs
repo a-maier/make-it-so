@@ -147,9 +147,8 @@ impl Runner {
 
     /// Save the dependencies to the associated YAML cache file
     pub fn save(&self) -> Result<(), IOError> {
-        let target_dir = self.cache_path
-            .parent()
-            .expect("Cache path has no parent");
+        let target_dir =
+            self.cache_path.parent().expect("Cache path has no parent");
         let mut outfile = NamedTempFile::new_in(target_dir)?;
         self.write_dependencies(&mut outfile)?;
         outfile.persist(&self.cache_path)?;
