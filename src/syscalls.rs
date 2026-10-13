@@ -9,7 +9,6 @@ use crate::{RunError, SyscallHandleError};
 
 #[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub(crate) enum SyscallAction {
-    SetExitStatus(i32),
     AddDependency(PathBuf),
     AddDependencyPair(PathBuf, PathBuf),
 }
@@ -417,7 +416,7 @@ pub(crate) mod target_syscalls {
         syscall: Syscall,
     ) -> Result<Option<SyscallAction>, SyscallHandleError> {
         use Syscall::*;
-        use SyscallAction::{AddDependency, AddDependencyPair, SetExitStatus};
+        use SyscallAction::{AddDependency, AddDependencyPair};
         let res = match syscall {
             // TODO: Chdir?
             Stat | Lstat | Access | Execve | Truncate | Mkdir | Rmdir
@@ -494,11 +493,6 @@ pub(crate) mod target_syscalls {
             Openat2 => {
                 warn!("Ignoring call to `{syscall}`, dependencies may be lost");
                 None
-            }
-            Exit | ExitGroup => {
-                let status = registers.rdi as i32;
-                trace!("Child exits with status {status}");
-                Some(SetExitStatus(status))
             }
             Rename | Link | Symlink => {
                 let from_addr = registers.rdi;

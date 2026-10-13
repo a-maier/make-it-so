@@ -106,7 +106,7 @@ use std::{
 
 use bon::Builder;
 use log::{debug, info, trace, warn};
-use pete::{Ptracer, Restart};
+use pete::{Ptracer, Restart, Stop};
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use syscalls::SyscallAction::*;
@@ -275,18 +275,22 @@ impl Runner {
         dependencies.insert(child_exe);
         let mut exit_status = 0;
         while let Some(mut child) = tracer.wait().map_err(RunError::Wait)? {
-            // TODO: only consider one of pre- and post-execution stops
-            match syscalls::handle_syscall(&mut child) {
-                Ok(Some(AddDependencyPair(path0, path1))) => {
-                    dependencies.insert(path0);
-                    dependencies.insert(path1);
+            match child.stop {
+                Stop::SyscallEnter => {
+                    match syscalls::handle_syscall(&mut child) {
+                        Ok(Some(AddDependencyPair(path0, path1))) => {
+                            dependencies.insert(path0);
+                            dependencies.insert(path1);
+                        }
+                        Ok(Some(AddDependency(path))) => {
+                            dependencies.insert(path);
+                        }
+                        Ok(None) => {}
+                        Err(e) => warn!("{:?}", anyhow::anyhow!(e)),
+                    }
                 }
-                Ok(Some(AddDependency(path))) => {
-                    dependencies.insert(path);
-                }
-                Ok(Some(SetExitStatus(status))) => exit_status = status,
-                Ok(None) => {}
-                Err(e) => warn!("{:?}", anyhow::anyhow!(e)),
+                Stop::Exiting { exit_code } => exit_status = exit_code,
+                _ => (),
             }
             tracer
                 .restart(child, Restart::Syscall)
