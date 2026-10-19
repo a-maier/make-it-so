@@ -39,6 +39,7 @@
 //! };
 //! let dependencies = runner.cache.get_mut(&task).unwrap();
 //! dependencies.0.remove(Path::new("/etc/ld.so.cache"));
+//! # std::fs::remove_file(".dependencies.yaml");
 //! # Ok::<(), RunError>(())
 //! ```
 //!
