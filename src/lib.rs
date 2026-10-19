@@ -114,6 +114,8 @@ use syscalls::SyscallAction::*;
 use tempfile::NamedTempFile;
 use thiserror::Error;
 
+pub use rayon;
+
 /// The task runner
 #[derive(Clone, Debug, Default, Eq, PartialEq, Deserialize, Serialize)]
 pub struct Runner {
