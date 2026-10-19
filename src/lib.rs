@@ -304,25 +304,54 @@ impl Runner {
         Ok(dependencies)
     }
 
-    fn is_up_to_date(&self, task: &Task) -> bool {
+    /// Iterator over all changed task dependencies
+    ///
+    /// `None` means that the task is unknown, either because it
+    /// was never run before or because the latest run failed.
+    /// Otherwise, returns an iterator over all files the task
+    /// accesses that have been modified since the last successful
+    /// run.
+    pub fn changed_dependencies<'a>(
+        &'a self,
+        task: &Task,
+    ) -> Option<impl ParallelIterator<Item = FileUpdate<'a>>> {
         // TODO: account for env
-        let Some(dependencies) = self.cache.get(task) else {
-            debug!("Dependencies of {} are unknown", task.name);
-            return false;
-        };
-        // TODO: parallelize
-        for (file, mod_time) in &dependencies.0 {
-            let new_mod_time = file.metadata().and_then(|m| m.modified()).ok();
-            if &new_mod_time != mod_time {
-                debug!(
-                    "{file:?} time stamp changed: {mod_time:?} -> {new_mod_time:?}"
-                );
-                return false;
-            }
-            trace!("{file:?} time stamp unchanged: {mod_time:?}");
-        }
-        true
+        let dependencies = self.cache.get(task)?;
+        Some(
+            dependencies.0
+                .par_iter()
+                .filter_map(|(file, old_time_stamp)| {
+                    let old_time_stamp = *old_time_stamp;
+                    let new_time_stamp = file.metadata().and_then(|m| m.modified()).ok();
+                    if new_time_stamp != old_time_stamp {
+                        debug!("{file:?} time stamp changed: {old_time_stamp:?} -> {new_time_stamp:?}");
+                        Some(FileUpdate{ file, old_time_stamp, new_time_stamp })
+                    } else {
+                        trace!("{file:?} time stamp unchanged: {old_time_stamp:?}");
+                        None
+                    }
+                })
+        )
     }
+
+    fn is_up_to_date(&self, task: &Task) -> bool {
+        self.changed_dependencies(task).is_some_and(|d| is_empty(d))
+    }
+}
+
+fn is_empty<T>(d: impl ParallelIterator<Item = T>) -> bool {
+    d.any(|_| true)
+}
+
+/// An updated file
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub struct FileUpdate<'a> {
+    /// File path
+    pub file: &'a Path,
+    /// Modification time after latest successful run
+    pub old_time_stamp: Option<SystemTime>,
+    /// Current modification time
+    pub new_time_stamp: Option<SystemTime>,
 }
 
 #[derive(Debug, Error)]
