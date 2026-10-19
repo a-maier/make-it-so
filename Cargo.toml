@@ -1,6 +1,6 @@
 [package]
 name = "make-it-so"
-version = "0.1.1"
+version = "0.2.0"
 edition = "2024"
 description = "An experimental lazy command runner library"
 authors = ["Andreas Maier <andreas.maier@ifj.edu.pl>"]
