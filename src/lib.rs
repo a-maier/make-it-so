@@ -342,7 +342,7 @@ impl Runner {
 }
 
 fn is_empty<T>(d: impl ParallelIterator<Item = T>) -> bool {
-    d.any(|_| true)
+    d.any(|_| false)
 }
 
 /// An updated file
